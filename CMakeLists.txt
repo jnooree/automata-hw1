@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)  # Version for Ubuntu 20.04 LTS
-project(c-like-template LANGUAGES CXX)
+project(automata-hw1 LANGUAGES CXX)
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Bulid type")
 
