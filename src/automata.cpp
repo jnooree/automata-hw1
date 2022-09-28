@@ -1,7 +1,9 @@
 #include "automata.h"
 
+#include <algorithm>
 #include <cassert>
 #include <stack>
+#include <unordered_set>
 #include <vector>
 
 namespace athw1 {
@@ -49,8 +51,58 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
   return func;
 }
 
+namespace {
+  void deterministic_transitions(const TransFunc &func,
+                                 const std::unordered_set<int> &curr_states,
+                                 std::unordered_set<int> &next_states, int a) {
+    for (const int q: curr_states) {
+      const auto &next = func(q, a);
+      assert(next.size() <= 1);
+      if (!next.empty())
+        next_states.insert(next[0]);
+    }
+  }
+
+  // Only epsilon transtitions are non-deterministic
+  void epsilon_transitions(const TransFunc &func,
+                           std::unordered_set<int> &states,
+                           std::vector<int> &visited) {
+    auto mark = [&](auto &&self, const int q) -> void {
+      states.insert(q);
+      visited[q] = 1;
+
+      for (const int p: func(q, 0))
+        if (!visited[p])
+          self(self, p);
+    };
+
+    for (const int q: states)
+      mark(mark, q);
+  }
+} // namespace
+
 bool Automata::accepts(const std::string_view &str) const {
-  return false;
+  std::unordered_set<int> states { initial() }, prev_states;
+  std::vector<int> visited(size());
+
+  epsilon_transitions(func_, states, visited);
+
+  for (const char a: str) {
+    std::swap(prev_states, states);
+
+    // Bookkeeping
+    states.clear();
+    std::fill(visited.begin(), visited.end(), 0);
+
+    // Do transitions
+    deterministic_transitions(func_, prev_states, states, alpha_to_idx(a));
+    epsilon_transitions(func_, states, visited);
+
+    if (states.empty())
+      return false;
+  }
+
+  return states.count(final()) != 0;
 }
 
 Automata &Automata::concat(Automata &&other) {
