@@ -17,7 +17,8 @@ namespace {
     std::vector<std::string_view> strings;
     strings.reserve(M);
 
-    int lastpos = str.find_first_not_of(' ');
+    // Consider extra space after M
+    int lastpos = 1;
     for (int i = 0; i < M - 1; ++i) {
       const int next = str.find(' ', lastpos);
       strings.push_back(std::string_view(str.data() + lastpos, next - lastpos));
