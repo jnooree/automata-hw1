@@ -54,7 +54,9 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 namespace {
   void deterministic_transitions(const TransFunc &func,
                                  const std::unordered_set<int> &curr_states,
-                                 std::unordered_set<int> &next_states, int a) {
+                                 std::unordered_set<int> &next_states,
+                                 const int a) {
+    assert(a != 0);
     for (const int q: curr_states) {
       const auto &next = func(q, a);
       assert(next.size() <= 1);
@@ -82,27 +84,31 @@ namespace {
 } // namespace
 
 bool Automata::accepts(const std::string_view &str) const {
-  std::unordered_set<int> states { initial() }, prev_states;
+  std::unordered_set<int> s { initial() }, t;
+  auto *curr_states = &s, *next_states = &t;
   std::vector<int> visited(size());
 
-  epsilon_transitions(func_, states, visited);
+  epsilon_transitions(func_, *curr_states, visited);
 
   for (const char a: str) {
-    std::swap(prev_states, states);
-
     // Bookkeeping
-    states.clear();
+    next_states->clear();
     std::fill(visited.begin(), visited.end(), 0);
 
     // Do transitions
-    deterministic_transitions(func_, prev_states, states, alpha_to_idx(a));
-    epsilon_transitions(func_, states, visited);
+    deterministic_transitions(func_, *curr_states, *next_states,
+                              alpha_to_idx(a));
+    epsilon_transitions(func_, *next_states, visited);
 
-    if (states.empty())
+    // Short-circuit
+    if (next_states->empty())
       return false;
+
+    // Now next_states is the new current state
+    std::swap(curr_states, next_states);
   }
 
-  return states.count(final()) != 0;
+  return curr_states->count(final()) != 0;
 }
 
 Automata &Automata::concat(Automata &&other) {
