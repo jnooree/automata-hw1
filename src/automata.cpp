@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <stack>
-#include <unordered_set>
 #include <vector>
+
+#include "fixedset.hpp"
 
 namespace athw1 {
 namespace {
@@ -52,10 +54,11 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 }
 
 namespace {
+  using FixedSet = fixed_set<int>;
+
   void deterministic_transitions(const TransFunc &func,
-                                 const std::unordered_set<int> &curr_states,
-                                 std::unordered_set<int> &next_states,
-                                 const int a) {
+                                 const FixedSet &curr_states,
+                                 FixedSet &next_states, const int a) {
     assert(a != 0);
     for (const int q: curr_states) {
       const auto &next = func(q, a);
@@ -66,16 +69,17 @@ namespace {
   }
 
   // Only epsilon transtitions are non-deterministic
-  void epsilon_transitions(const TransFunc &func,
-                           std::unordered_set<int> &states,
-                           std::vector<int> &visited) {
+  void epsilon_transitions(const TransFunc &func, FixedSet &states,
+                           FixedSet &visited) {
     auto mark = [&](auto &&self, const int q) -> void {
+      if (visited.contains(q))
+        return;
+
       states.insert(q);
-      visited[q] = 1;
+      visited.insert(q);
 
       for (const int p: func(q, 0))
-        if (!visited[p])
-          self(self, p);
+        self(self, p);
     };
 
     for (const int q: states)
@@ -84,16 +88,16 @@ namespace {
 } // namespace
 
 bool Automata::accepts(const std::string_view &str) const {
-  std::unordered_set<int> s { initial() }, t;
+  FixedSet s(size()), t(size()), visited(size());
   auto *curr_states = &s, *next_states = &t;
-  std::vector<int> visited(size());
 
+  curr_states->insert(initial());
   epsilon_transitions(func_, *curr_states, visited);
 
   for (const char a: str) {
     // Bookkeeping
     next_states->clear();
-    std::fill(visited.begin(), visited.end(), 0);
+    visited.clear();
 
     // Do transitions
     deterministic_transitions(func_, *curr_states, *next_states,
@@ -108,7 +112,7 @@ bool Automata::accepts(const std::string_view &str) const {
     std::swap(curr_states, next_states);
   }
 
-  return curr_states->count(final()) != 0;
+  return curr_states->contains(final());
 }
 
 Automata &Automata::concat(Automata &&other) {
