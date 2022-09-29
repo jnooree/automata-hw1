@@ -1,3 +1,3 @@
-#!/bin/bash -e
+#!/bin/bash -eu
 
-rm -vf test/*.{q,a}*
+rm -vf "$1"/*.{q,a}*
