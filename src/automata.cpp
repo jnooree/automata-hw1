@@ -9,12 +9,6 @@
 #include "fixedset.hpp"
 
 namespace athw1 {
-namespace {
-  constexpr int alpha_to_idx(const char a) {
-    return a - '0' + 1;
-  }
-} // namespace
-
 PartialTransFunc PartialTransFunc::from_spec(std::istream &spec_src) {
   PartialTransFunc pf;
 
@@ -100,8 +94,7 @@ bool Automata::accepts(const std::string_view &str) const {
     visited.clear();
 
     // Do transitions
-    deterministic_transitions(func_, *curr_states, *next_states,
-                              alpha_to_idx(a));
+    deterministic_transitions(func_, *curr_states, *next_states, ctoa(a));
     epsilon_transitions(func_, *next_states, visited);
 
     // Short-circuit
@@ -180,9 +173,10 @@ Automata Automata::from_regex(const std::string_view &regex) {
 
   for (const char a: regex) {
     switch (a) {
+    case 'e':
     case '0':
     case '1':
-      nfas.push(Automata(TransFunc::from_alphabet(alpha_to_idx(a)), 0, 1));
+      nfas.push(Automata(TransFunc::from_alphabet(ctoa(a)), 0, 1));
       break;
     case '*':
     case '.':

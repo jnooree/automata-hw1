@@ -2,6 +2,7 @@
 #define AUTOMATA_HW1_AUTOMATA_H_
 
 #include <array>
+#include <cassert>
 #include <initializer_list>
 #include <istream>
 #include <iterator>
@@ -11,6 +12,21 @@
 #include <vector>
 
 namespace athw1 {
+constexpr int ctoa(const char c) {
+  switch (c) {
+  case 'e':
+    return 0;
+  case '0':
+    return 1;
+  case '1':
+    return 2;
+  }
+  // LCOV_EXCL_START
+  assert(false);
+  return -1;
+  // LCOV_EXCL_STOP
+}
+
 class PartialTransFunc {
 private:
   // 0 -> eps, 1 -> 0, 2 -> 1

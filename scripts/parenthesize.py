@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Generic, TypeVar
 
 _T = TypeVar("_T")
+alphabets = "e01"
 
 
 class Stack(Generic[_T]):
@@ -27,13 +28,13 @@ class Stack(Generic[_T]):
 
 
 def add_concat_op(regex: str) -> str:
-    sep = re.compile(r"([^01])")
+    sep = re.compile(fr"([^{alphabets}])")
     parts = sep.split(regex)
     parts = [part for part in parts if part]
 
     prev_part = ""
     for i, part in enumerate(parts):
-        is_alpha = part[0] in "01"
+        is_alpha = part[0] in alphabets
         if is_alpha:
             part = ".".join(part)
 
@@ -73,7 +74,7 @@ def parenthesize(regex: str) -> str:
     i = 0
     while i < len(regex):
         ch = regex[i]
-        if ch in "01":
+        if ch in alphabets:
             result.push(ch)
         elif not ops or ch in "(*":
             ops.push(ch)
