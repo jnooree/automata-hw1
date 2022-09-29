@@ -1,5 +1,11 @@
 # shellcheck shell=bash
 
+if ! command tput init &>/dev/null; then
+	function tput() {
+		return
+	}
+fi
+
 function _do_announce() {
 	tput setaf "$1"
 	echo >&2 "[$2] $(basename "$3")"

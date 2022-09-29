@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR) # Version for Ubuntu 20.04 LTS
 project(automata-hw1 LANGUAGES CXX)
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Bulid type")
+option(CODE_COVERAGE "Build for test coverage" OFF)
 
 if(CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
@@ -23,6 +24,11 @@ endif()
 
 add_compile_options(
   -fno-rtti -fno-exceptions -pedantic -Wall -Wextra -Wno-sign-compare)
+
+if(CODE_COVERAGE)
+  include(CTest)
+  string(APPEND CMAKE_CXX_FLAGS "--coverage")
+endif()
 
 # Only do these if this is the main project, and not if it is included through
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -59,3 +65,7 @@ endif()
 # Uncomment next line for third-party libraries
 # add_subdirectory(third-party EXCLUDE_FROM_ALL)
 add_subdirectory(src)
+
+if(CODE_COVERAGE)
+  add_subdirectory(test)
+endif()
