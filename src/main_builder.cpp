@@ -4,12 +4,8 @@
 #include "automata.h"
 
 int main() {
-  using Automata = athw1::Automata;
-
   std::string regex;
-  std::cin >> regex;
-
-  Automata::from_regex(regex).to_spec(std::cout);
-
+  while (std::getline(std::cin, regex))
+    athw1::Automata::from_regex(regex).to_spec(std::cout);
   return 0;
 }
