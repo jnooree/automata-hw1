@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)  # Version for Ubuntu 20.04 LTS
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR) # Version for Ubuntu 20.04 LTS
 project(automata-hw1 LANGUAGES CXX)
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Bulid type")
@@ -21,7 +21,8 @@ elseif(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     "Please use clang or gcc as a compiler.")
 endif()
 
-add_compile_options(-pedantic -Wall -Wextra -Wno-sign-compare)
+add_compile_options(
+  -fno-rtti -fno-exceptions -pedantic -Wall -Wextra -Wno-sign-compare)
 
 # Only do these if this is the main project, and not if it is included through
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -31,18 +32,23 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
-  set(GLOBAL_OPTFLAGS " -${OPTIMIZATION_LEVEL} -fno-rtti -fno-exceptions")
+  set(GLOBAL_OPTFLAGS " -${OPTIMIZATION_LEVEL}")
+
   if(ENABLE_ARCH_NATIVE)
     string(APPEND GLOBAL_OPTFLAGS " -march=native")
   elseif(ENABLE_AVX2)
     string(APPEND GLOBAL_OPTFLAGS " -mavx2")
   endif()
+
   string(APPEND CMAKE_CXX_FLAGS_RELEASE "${GLOBAL_OPTFLAGS}")
   string(APPEND CMAKE_CXX_FLAGS_RELWITHDEBINFO "${GLOBAL_OPTFLAGS}")
 
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-O0)
     add_compile_definitions("DEBUG")
+
+    set(CMAKE_DEBUG_POSTFIX ".debug")
+    string(PREPEND CMAKE_EXECUTABLE_SUFFIX ".debug")
   elseif(ENABLE_IPO)
     # Next line is required for absl, etc.
     # set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
