@@ -97,14 +97,36 @@ def parenthesize(regex: str) -> str:
     return result.pop()
 
 
+def split_cases(cases: str):
+    return cases.strip().split(",")
+
+
 def main():
     src = Path(sys.argv[1])
     with open(src, "r") as fi:
-        for i, line in enumerate(fi, 1):
-            regex = line.strip()
-            regex = add_concat_op(regex)
-            with open(src.with_name(f"{i}.q1"), "w") as fo:
-                fo.write(f"{parenthesize(regex)}\n")
+        lines = fi.read().splitlines()
+
+    for i in range(0, len(lines) // 3):
+        lineno = i * 3
+        regex, inp, out = lines[lineno:lineno + 3]
+
+        regex = add_concat_op(regex)
+        regex = parenthesize(regex)
+
+        inp = split_cases(inp)
+        out = split_cases(out)
+
+        if len(inp) != len(out):
+            raise ValueError("Input and output lengths do not match")
+
+        with open(src.with_name(f"{i}.q1"), "w") as fo:
+            fo.write(regex + "\n")
+
+        with open(src.with_name(f"{i}.q2"), "w") as fo:
+            fo.write(f"{len(inp)} {' '.join(inp)}\n")
+
+        with open(src.with_name(f"{i}.a2"), "w") as fo:
+            fo.write("\n".join(out) + "\n")
 
 
 if __name__ == "__main__":
