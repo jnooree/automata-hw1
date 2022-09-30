@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import re
+
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -27,28 +27,21 @@ class Stack(Generic[_T]):
         return len(self._data)
 
 
-def add_concat_op(regex: str) -> str:
-    sep = re.compile(fr"([^{alphabets}])")
-    parts = sep.split(regex)
-    parts = [part for part in parts if part]
-
-    prev_part = ""
-    for i, part in enumerate(parts):
-        is_alpha = part[0] in alphabets
-        if is_alpha:
-            part = ".".join(part)
-
-        if prev_part:
+def explicit_concat_op(regex: str) -> str:
+    chars = []
+    prev = None
+    for curr in regex:
+        if prev:
             # Concat when:
             #   - current part is '(' and previous part is not '(', or
-            #   - current part is alphabet and previous part is ')' or '*'
-            if ((part == "(" and prev_part != "(")
-                    or (is_alpha and prev_part[-1] in ")*")):
-                part = "." + part
-
-        parts[i] = prev_part = part
-
-    return "".join(parts)
+            #   - current part is alphabet and previous part is
+            #     ')' or '*' or alphabet
+            if ((curr == "(" and prev != "(")
+                    or (curr in alphabets and prev in f")*{alphabets}")):
+                chars.append(".")
+        chars.append(curr)
+        prev = curr
+    return "".join(chars)
 
 
 _precedence = defaultdict(int, {
@@ -59,6 +52,11 @@ _precedence = defaultdict(int, {
 
 
 def parenthesize(regex: str) -> str:
+    regex = explicit_concat_op(regex)
+
+    result = Stack[str]()
+    ops = Stack[str]()
+
     def pop_join():
         op = ops.pop()
         rhs = result.pop()
@@ -67,9 +65,6 @@ def parenthesize(regex: str) -> str:
         else:
             ret = f"({result.pop()}{op}{rhs})"
         result.push(ret)
-
-    result = Stack[str]()
-    ops = Stack[str]()
 
     i = 0
     while i < len(regex):
@@ -110,9 +105,7 @@ def main():
         lineno = i * 3
         regex, inp, out = lines[lineno:lineno + 3]
 
-        regex = add_concat_op(regex)
         regex = parenthesize(regex)
-
         inp = split_cases(inp)
         out = split_cases(out)
 
