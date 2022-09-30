@@ -10,5 +10,5 @@ function(add_project_executable name)
   install(TARGETS ${name} RUNTIME)
 endfunction()
 
-add_project_executable(builder)
-add_project_executable(runner)
+add_project_executable(Q1)
+add_project_executable(Q2)
