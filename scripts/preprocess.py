@@ -96,8 +96,11 @@ def split_cases(cases: str):
     return cases.strip().split(",")
 
 
-def main():
-    src = Path(sys.argv[1])
+def main(src=None):
+    if not src:
+        src = sys.argv[1]
+
+    src = Path(src)
     with open(src, "r") as fi:
         lines = fi.read().splitlines()
 

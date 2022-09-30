@@ -3,6 +3,8 @@
 import os
 import random
 
+from preprocess import main as preprocess
+
 
 def main():
     alphabets = "01"
@@ -15,10 +17,11 @@ def main():
 
     os.makedirs("benchmark", exist_ok=True)
     with open("benchmark/benchmark.in", "w") as f:
-        f.write("((0+1)(0+1)(0+1))*" * 10 + "\n")
+        f.write("((0+1)(0+1)(0+1))*" * 150 + "\n")
         f.write(",".join(inputs) + "\n")
         f.write(",".join(results) + "\n")
 
+    preprocess("benchmark/benchmark.in")
 
 if __name__ == "__main__":
     main()
