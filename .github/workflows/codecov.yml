@@ -23,14 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install lcov
-        run: sudo apt install lcov -y
-
-      - name: Build
-        run: ./scripts/compile.sh -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=ON
-
-      - name: Run tests and collect lcov report
-        run: .github/scripts/coverage.sh
+      - name: Compile and run tests
+        uses: addnab/docker-run-action@v3
+        with:
+          image: jihoonjang2/automata:hw1
+          shell: bash
+          options: -v ${{ github.workspace }}:/work
+          run: |
+            apt install lcov -y
+            cd /work
+            scripts/compile.sh -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=ON
+            .github/scripts/coverage.sh
 
       - uses: codecov/codecov-action@v3
         with:
