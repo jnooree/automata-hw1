@@ -54,7 +54,7 @@ namespace {
                                  const FixedSet &curr_states,
                                  FixedSet &next_states, const int a) {
     assert(a != 0);
-    for (const int q: curr_states) {
+    for (auto q: curr_states) {
       const auto &next = func(q, a);
       assert(next.size() <= 1);
       if (!next.empty())
@@ -72,11 +72,11 @@ namespace {
       states.insert(q);
       visited.insert(q);
 
-      for (const int p: func(q, 0))
+      for (auto p: func(q, 0))
         self(self, p);
     };
 
-    for (const int q: states)
+    for (auto q: states)
       mark(mark, q);
   }
 } // namespace

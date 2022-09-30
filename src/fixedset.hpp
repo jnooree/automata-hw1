@@ -70,7 +70,7 @@ public:
 
   void insert(const Integer v) {
     assert(v >= 0 && v < data_.size());
-    if (data_[v] != 0)
+    if (contains(v))
       return;
 
     data_[v] = 1;
@@ -81,7 +81,8 @@ public:
     if (empty())
       return;
 
-    std::fill(data_.begin(), data_.end(), 0);
+    for (auto v: idxs_)
+      data_[v] = 0;
     idxs_.clear();
   }
 
