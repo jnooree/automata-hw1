@@ -23,5 +23,6 @@ def main():
 
     preprocess("benchmark/benchmark.in")
 
+
 if __name__ == "__main__":
     main()
