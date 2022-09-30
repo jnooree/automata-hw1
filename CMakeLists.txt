@@ -11,16 +11,7 @@ endif()
 # Compile options
 set(OPTIMIZATION_LEVEL "O3" CACHE STRING "Optimization level")
 option(ENABLE_IPO "Do interprocedural optimization" ON)
-option(ENABLE_AVX2 "Use -mavx2 flag for optimization" ON)
-option(ENABLE_ARCH_NATIVE "Use -march=native flag for optimization" OFF)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  string(APPEND CMAKE_CXX_FLAGS " -stdlib=libstdc++")
-elseif(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  message(FATAL_ERROR
-    "Unsupported compiler '${CMAKE_CXX_COMPILER_ID}' detected! "
-    "Please use clang or gcc as a compiler.")
-endif()
+option(ENABLE_ARCH_NATIVE "Use -march=native flag for optimization" ON)
 
 add_compile_options(
   -fno-rtti -fno-exceptions -pedantic -Wall -Wextra -Wno-sign-compare)
@@ -42,8 +33,6 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   if(ENABLE_ARCH_NATIVE)
     string(APPEND GLOBAL_OPTFLAGS " -march=native")
-  elseif(ENABLE_AVX2)
-    string(APPEND GLOBAL_OPTFLAGS " -mavx2")
   endif()
 
   string(APPEND CMAKE_CXX_FLAGS_RELEASE "${GLOBAL_OPTFLAGS}")
@@ -56,14 +45,10 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(CMAKE_DEBUG_POSTFIX ".debug")
     string(PREPEND CMAKE_EXECUTABLE_SUFFIX ".debug")
   elseif(ENABLE_IPO)
-    # Next line is required for absl, etc.
-    # set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
   endif()
 endif()
 
-# Uncomment next line for third-party libraries
-# add_subdirectory(third-party EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 
 if(CODE_COVERAGE)
