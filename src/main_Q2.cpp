@@ -1,37 +1,23 @@
+#include <ios>
 #include <iostream>
+#include <limits>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "automata.h"
 
 namespace athw1 {
 namespace {
-  std::string read_strings(std::istream &is) {
+  constexpr auto kStreamMax = std::numeric_limits<std::streamsize>::max();
+
+  std::string read_string(std::istream &is) {
     std::string s;
     std::getline(is, s);
     return s;
   }
 
-  std::vector<std::string_view> split(const std::string &str, const int M) {
-    std::vector<std::string_view> strings;
-    strings.reserve(M);
-
-    // Consider extra space after M
-    int lastpos = 1;
-    for (int i = 0; i < M - 1; ++i) {
-      const int next = str.find(' ', lastpos);
-      strings.push_back(std::string_view(str.data() + lastpos, next - lastpos));
-      lastpos = next + 1;
-    }
-    strings.push_back(
-      std::string_view(str.data() + lastpos, str.size() - lastpos));
-
-    return strings;
-  }
-
   void test_strings(const Automata &automata,
-                    const std::vector<std::string_view> &strings) {
+                    const std::vector<std::string> &strings) {
     for (const auto &s: strings)
       std::cout << (automata.accepts(s) ? "yes" : "no") << '\n';
   }
@@ -41,10 +27,15 @@ namespace {
 int main() {
   int M;
   std::cin >> M;
-  const auto strings = athw1::read_strings(std::cin);
-  const auto automata = athw1::Automata::from_spec(std::cin);
+  std::cin.ignore(athw1::kStreamMax, '\n');
 
-  athw1::test_strings(automata, athw1::split(strings, M));
+  std::vector<std::string> strings;
+  strings.reserve(M);
+  for (int i = 0; i < M; ++i)
+    strings.push_back(athw1::read_string(std::cin));
+
+  const auto automata = athw1::Automata::from_spec(std::cin);
+  athw1::test_strings(automata, strings);
 
   return 0;
 }

@@ -101,6 +101,9 @@ def main(src=None):
         src = sys.argv[1]
 
     src = Path(src)
+    out_dir = src.with_name("generated")
+    out_dir.mkdir()
+
     with open(src, "r") as fi:
         lines = fi.read().splitlines()
 
@@ -115,13 +118,13 @@ def main(src=None):
         if len(inp) != len(out):
             raise ValueError("Input and output lengths do not match")
 
-        with open(src.with_name(f"{i}.q1"), "w") as fo:
+        with open(out_dir / f"{i}.q1", "w") as fo:
             fo.write(regex + "\n")
 
-        with open(src.with_name(f"{i}.q2"), "w") as fo:
-            fo.write(f"{len(inp)} {' '.join(inp)}\n")
+        with open(out_dir / f"{i}.q2", "w") as fo:
+            fo.write(f"{len(inp)}\n" + "\n".join(inp) + "\n")
 
-        with open(src.with_name(f"{i}.a2"), "w") as fo:
+        with open(out_dir / f"{i}.a2", "w") as fo:
             fo.write("\n".join(out) + "\n")
 
 

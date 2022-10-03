@@ -1,17 +1,21 @@
 #!/bin/bash -eu
 
-hwnum="$1"
+prefix='Automata_HW1_2022-28022'
 
-scripts/cleanup.sh test
+rm -rf test/generated
 scripts/preprocess.py "test/test.in"
 
-cp scripts/compile.sh "Automata_HW${hwnum}_2022-28022_compile.sh"
+mv test/generated .
+rm -rf test
+mv generated test
+
+cp scripts/compile.sh "${prefix}_compile.sh"
 for i in 1 2; do
-	file="Automata_HW${hwnum}_2022-28022_Q${i}.sh"
+	file="${prefix}_Q${i}.sh"
 	echo "#!/bin/sh
 bin/Q${i}" >>"$file"
 	chmod +x "$file"
 done
 
-zip -r "Automata_HW${hwnum}_2022-28022.zip" \
-	./*.sh CMakeLists.txt src test/*.{q,a}*
+zip -r "${prefix}.zip" \
+	./*.sh CMakeLists.txt src test

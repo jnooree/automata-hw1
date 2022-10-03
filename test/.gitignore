@@ -1,4 +1,1 @@
-*
-!.gitignore
-!CMakeLists.txt
-!*.in
+generated/

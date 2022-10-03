@@ -3,8 +3,12 @@
 template="${1-test/test.in}"
 suffix="${2-.debug}"
 
-scripts/cleanup.sh "$(dirname "$template")" &>/dev/null
-scripts/preprocess.py "$template"
+testdir="$(dirname "$template")"
+workdir="$(dirname "$template")/generated"
 
-scripts/run_builder.sh "$suffix"
-scripts/run_runner.sh "$suffix"
+rm -rf "$workdir"
+scripts/preprocess.py "$template"
+cp -t "$workdir" "$testdir"/*.{q,a}*
+
+scripts/run_builder.sh "$workdir" "$suffix"
+scripts/run_runner.sh "$workdir" "$suffix"
