@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
-#include <iterator>
 #include <stack>
 #include <unordered_map>
 #include <vector>
@@ -50,12 +48,8 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 }
 
 namespace {
-  using FixedSet = fixed_set<int>;
-  using Cache = std::unordered_map<int, FixedSet>;
-
-#ifndef NDEBUG
-  size_t total_recursion = 0UL;
-#endif
+  using FixedSet = Automata::FixedSet;
+  using Cache = Automata::Cache;
 
   void deterministic_transitions(const TransFunc &func,
                                  const FixedSet &curr_states,
@@ -71,63 +65,57 @@ namespace {
 
   // Only epsilon transtitions are non-deterministic
   void epsilon_transitions(const TransFunc &func, FixedSet &states,
-                           Cache &cache) {
+                           FixedSet &visited, Cache &cache) {
     using CacheEntry = Cache::mapped_type;
 
-    Cache temp;
-
     auto mark = [&](auto &&self, const int q) -> const CacheEntry & {
-#ifndef NDEBUG
-      total_recursion += 1;
-#endif
+      visited.insert(q);
 
       auto cit = cache.find(q);
-      if (cit != cache.end())
-        return cit->second;
+      if (cit != cache.end()) {
+        const CacheEntry &entry = cit->second;
+        visited.insert(entry.begin(), entry.end());
+        return entry;
+      }
 
-      auto tit = temp.find(q);
-      if (tit != temp.end())
-        return tit->second;
-
-      CacheEntry &current = temp.emplace(q, states.capacity()).first->second;
+      CacheEntry entry(states.capacity());
       for (auto p: func(q, 0)) {
-        current.insert(p);
+        entry.insert(p);
+        if (visited.contains(p))
+          continue;
 
         const CacheEntry &other = self(self, p);
-        current.insert(other.begin(), other.end());
+        entry.insert(other.begin(), other.end());
       }
-      return cache.emplace(q, std::move(current)).first->second;
+      return cache.emplace(q, std::move(entry)).first->second;
     };
 
-    for (auto q: states) {
-      mark(mark, q);
-      temp.clear();
-    }
-
-    for (auto q: states) {
-      const CacheEntry &entry = cache.find(q)->second;
+    for (auto it = states.begin(), end = states.end(); it != end; ++it) {
+      const CacheEntry &entry = mark(mark, *it);
       states.insert(entry.begin(), entry.end());
     }
   }
 } // namespace
 
-bool Automata::accepts(const std::string_view &str) const {
-  FixedSet s(size()), t(size());
+bool Automata::accepts(const std::string_view &str) {
+  return accepts_common(str, cache_);
+}
+
+bool Automata::accepts_common(const std::string_view &str, Cache &cache) const {
+  FixedSet s(size()), t(size()), visited(size());
   auto *curr_states = &s, *next_states = &t;
 
-  // State cache for epsilon transitions
-  Cache cache(size());
-
   curr_states->insert(initial());
-  epsilon_transitions(func_, *curr_states, cache);
+  epsilon_transitions(func_, *curr_states, visited, cache);
 
   for (const char a: str) {
     // Bookkeeping
     next_states->clear();
+    visited.clear();
 
     // Do transitions
     deterministic_transitions(func_, *curr_states, *next_states, ctoa(a));
-    epsilon_transitions(func_, *next_states, cache);
+    epsilon_transitions(func_, *next_states, visited, cache);
 
     // Short-circuit
     if (next_states->empty())
@@ -136,10 +124,6 @@ bool Automata::accepts(const std::string_view &str) const {
     // Now next_states is the new current state
     std::swap(curr_states, next_states);
   }
-
-#ifndef NDEBUG
-  std::cerr << "Epsilon transitions: " << total_recursion << '\n';
-#endif
 
   return curr_states->contains(final());
 }

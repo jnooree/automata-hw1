@@ -8,8 +8,11 @@
 #include <iterator>
 #include <ostream>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "fixedset.hpp"
 
 namespace athw1 {
 constexpr int ctoa(const char c) {
@@ -140,10 +143,16 @@ private:
 };
 
 class Automata {
+public:
+  using FixedSet = fixed_set<int>;
+  using Cache = std::unordered_map<int, FixedSet>;
+
 private:
   TransFunc func_;
   int init_;
   int fini_;
+
+  Cache cache_;
 
 public:
   // IO
@@ -161,7 +170,7 @@ public:
   }
 
   // Main API
-  bool accepts(const std::string_view &str) const;
+  bool accepts(const std::string_view &str);
 
   Automata &concat(Automata &&other);
   Automata &altern(Automata &&other);
@@ -194,6 +203,8 @@ private:
   void new_init_fini();
   void rebase_idxs(int offset);
   void join(Automata &other);
+
+  bool accepts_common(const std::string_view &str, Cache &cache) const;
 };
 } // namespace athw1
 

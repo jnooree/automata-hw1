@@ -15,12 +15,6 @@ namespace {
     std::getline(is, s);
     return s;
   }
-
-  void test_strings(const Automata &automata,
-                    const std::vector<std::string> &strings) {
-    for (const auto &s: strings)
-      std::cout << (automata.accepts(s) ? "yes" : "no") << '\n';
-  }
 } // namespace
 } // namespace athw1
 
@@ -34,8 +28,9 @@ int main() {
   for (int i = 0; i < M; ++i)
     strings.push_back(athw1::read_string(std::cin));
 
-  const auto automata = athw1::Automata::from_spec(std::cin);
-  athw1::test_strings(automata, strings);
+  auto automata = athw1::Automata::from_spec(std::cin);
+  for (const auto &s: strings)
+      std::cout << (automata.accepts(s) ? "yes" : "no") << '\n';
 
   return 0;
 }
