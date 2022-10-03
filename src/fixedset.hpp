@@ -61,20 +61,40 @@ private:
 public:
   using const_iterator = detail::fixed_set_const_iter<Integer>;
 
-  explicit fixed_set(const int size): data_(size) { }
+  fixed_set() = default;
+
+  explicit fixed_set(const int capacity): data_(capacity) { }
 
   bool contains(const Integer v) const {
-    assert(v >= 0 && v < data_.size());
+    assert(v >= 0 && v < capacity());
     return data_[v] != 0;
   }
 
   void insert(const Integer v) {
-    assert(v >= 0 && v < data_.size());
+    assert(v >= 0 && v < capacity());
     if (contains(v))
       return;
 
     data_[v] = 1;
     idxs_.push_back(v);
+  }
+
+  template <class ForwardIterator>
+  void insert(ForwardIterator begin, ForwardIterator end) {
+    for (; begin != end; ++begin)
+      insert(*begin);
+  }
+
+  int size() const {
+    return idxs_.size();
+  }
+
+  int capacity() const {
+    return data_.size();
+  }
+
+  bool empty() const {
+    return idxs_.empty();
   }
 
   void clear() {
@@ -84,10 +104,6 @@ public:
     for (auto v: idxs_)
       data_[v] = 0;
     idxs_.clear();
-  }
-
-  bool empty() const {
-    return idxs_.empty();
   }
 
   const_iterator end() const {

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <iterator>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 #include "fixedset.hpp"
@@ -49,6 +51,11 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 
 namespace {
   using FixedSet = fixed_set<int>;
+  using Cache = std::unordered_map<int, FixedSet>;
+
+#ifndef NDEBUG
+  size_t total_recursion = 0UL;
+#endif
 
   void deterministic_transitions(const TransFunc &func,
                                  const FixedSet &curr_states,
@@ -64,38 +71,63 @@ namespace {
 
   // Only epsilon transtitions are non-deterministic
   void epsilon_transitions(const TransFunc &func, FixedSet &states,
-                           FixedSet &visited) {
-    auto mark = [&](auto &&self, const int q) -> void {
-      if (visited.contains(q))
-        return;
+                           Cache &cache) {
+    using CacheEntry = Cache::mapped_type;
 
-      states.insert(q);
-      visited.insert(q);
+    Cache temp;
 
-      for (auto p: func(q, 0))
-        self(self, p);
+    auto mark = [&](auto &&self, const int q) -> const CacheEntry & {
+#ifndef NDEBUG
+      total_recursion += 1;
+#endif
+
+      auto cit = cache.find(q);
+      if (cit != cache.end())
+        return cit->second;
+
+      auto tit = temp.find(q);
+      if (tit != temp.end())
+        return tit->second;
+
+      CacheEntry &current = temp.emplace(q, states.capacity()).first->second;
+      for (auto p: func(q, 0)) {
+        current.insert(p);
+
+        const CacheEntry &other = self(self, p);
+        current.insert(other.begin(), other.end());
+      }
+      return cache.emplace(q, std::move(current)).first->second;
     };
 
-    for (auto q: states)
+    for (auto q: states) {
       mark(mark, q);
+      temp.clear();
+    }
+
+    for (auto q: states) {
+      const CacheEntry &entry = cache.find(q)->second;
+      states.insert(entry.begin(), entry.end());
+    }
   }
 } // namespace
 
 bool Automata::accepts(const std::string_view &str) const {
-  FixedSet s(size()), t(size()), visited(size());
+  FixedSet s(size()), t(size());
   auto *curr_states = &s, *next_states = &t;
 
+  // State cache for epsilon transitions
+  Cache cache(size());
+
   curr_states->insert(initial());
-  epsilon_transitions(func_, *curr_states, visited);
+  epsilon_transitions(func_, *curr_states, cache);
 
   for (const char a: str) {
     // Bookkeeping
     next_states->clear();
-    visited.clear();
 
     // Do transitions
     deterministic_transitions(func_, *curr_states, *next_states, ctoa(a));
-    epsilon_transitions(func_, *next_states, visited);
+    epsilon_transitions(func_, *next_states, cache);
 
     // Short-circuit
     if (next_states->empty())
@@ -104,6 +136,10 @@ bool Automata::accepts(const std::string_view &str) const {
     // Now next_states is the new current state
     std::swap(curr_states, next_states);
   }
+
+#ifndef NDEBUG
+  std::cerr << "Epsilon transitions: " << total_recursion << '\n';
+#endif
 
   return curr_states->contains(final());
 }
