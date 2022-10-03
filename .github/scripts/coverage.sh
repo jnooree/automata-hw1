@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-cd build
+cd "$1"
 
 ctest -C Debug -T test
 lcov --capture --directory . --output-file coverage.info

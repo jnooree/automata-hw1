@@ -19,3 +19,13 @@ function failure() {
 function success() {
 	_do_announce 2 SUCCESS "$1"
 }
+
+if [[ -z "$2" ]]; then
+	function with_timeout() {
+		timeout 10s "$@"
+	}
+else
+	function with_timeout() {
+		"$@"
+	}
+fi
