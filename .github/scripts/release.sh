@@ -3,6 +3,7 @@
 prefix='Automata_HW1_2022-28022'
 
 rm -rf test/generated
+python3 -m pip install -r test-requirements.txt
 scripts/preprocess.py "test/test.in"
 
 mv test/generated .

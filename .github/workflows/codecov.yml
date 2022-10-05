@@ -25,8 +25,9 @@ jobs:
           shell: bash
           options: -v ${{ github.workspace }}:/work
           run: |
-            apt install lcov -y
             cd /work
+            apt install lcov -y
+            python3 -m pip install -r test-requirements.txt
             scripts/compile.sh -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=ON
             .github/scripts/coverage.sh build
 

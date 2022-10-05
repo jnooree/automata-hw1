@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import sys
+import re
+import random
 from pathlib import Path
 from collections import defaultdict
 from typing import Generic, TypeVar
+
+from xeger import Xeger
 
 _T = TypeVar("_T")
 alphabets = "e01"
@@ -92,40 +96,74 @@ def parenthesize(regex: str) -> str:
     return result.pop()
 
 
-def split_cases(cases: str):
-    return cases.strip().split(",")
+def to_posix(regex: str):
+    regex = regex.replace(".", "")
+    regex = regex.replace("**", "*")
+    regex = regex.replace("e", "(?:)")
+    regex = regex.replace("+", "|")
+    return regex
 
 
-def main(src=None):
-    if not src:
-        src = sys.argv[1]
+def generate_examples(pattern: re.Pattern):
+    inp = set()
+    total_length = 0
+    xeger = Xeger(limit=10000)
+    for _ in range(100):
+        ex = xeger.xeger(pattern)
+        if not ex or ex in inp:
+            continue
 
-    src = Path(src)
+        total_length = total_length + len(ex)
+        inp.add(ex)
+        if total_length > 15000:
+            break
+
+    inp = list(inp)
+    out = ["yes"] * len(inp)
+
+    for _ in range(1000 - len(inp)):
+        k = random.randint(1, 10000)
+        length_sum = total_length + k
+        if length_sum > 30000:
+            continue
+
+        total_length = length_sum
+        s = "".join(random.choices("01", k=k))
+        inp.append(s)
+        out.append("yes" if pattern.fullmatch(s) else "no")
+
+    return inp, out
+
+
+def write_examples(out_dir: Path, prefix, rex, inp, out):
+    with open(out_dir / f"{prefix}.q1", "w") as fo:
+        fo.write(rex + "\n")
+
+    with open(out_dir / f"{prefix}.q2", "w") as fo:
+        fo.write(f"{len(inp)}\n" + "\n".join(inp) + "\n")
+
+    with open(out_dir / f"{prefix}.a2", "w") as fo:
+        fo.write("\n".join(out) + "\n")
+
+
+def generate(out_dir, i, regex):
+    pr = parenthesize(regex)
+
+    posix = to_posix(regex)
+    pattern = re.compile(posix)
+    inp, out = generate_examples(pattern)
+
+    write_examples(out_dir, f"{i:02d}", pr, inp, out)
+
+
+def main():
+    src = Path(sys.argv[1])
     out_dir = src.with_name("generated")
-    out_dir.mkdir()
+    out_dir.mkdir(parents=True)
 
-    with open(src, "r") as fi:
-        lines = fi.read().splitlines()
-
-    for i in range(0, len(lines) // 3):
-        lineno = i * 3
-        regex, inp, out = lines[lineno:lineno + 3]
-
-        regex = parenthesize(regex)
-        inp = split_cases(inp)
-        out = split_cases(out)
-
-        if len(inp) != len(out):
-            raise ValueError("Input and output lengths do not match")
-
-        with open(out_dir / f"{i}.q1", "w") as fo:
-            fo.write(regex + "\n")
-
-        with open(out_dir / f"{i}.q2", "w") as fo:
-            fo.write(f"{len(inp)}\n" + "\n".join(inp) + "\n")
-
-        with open(out_dir / f"{i}.a2", "w") as fo:
-            fo.write("\n".join(out) + "\n")
+    with src.open() as f:
+        for i, line in enumerate(f):
+            generate(out_dir, i, line.rstrip())
 
 
 if __name__ == "__main__":
