@@ -65,6 +65,14 @@ public:
 
   explicit fixed_set(const int capacity): data_(capacity) { }
 
+  template <class Iterator>
+  fixed_set(const int capacity, Iterator begin, Iterator end): data_(capacity) {
+    for (; begin != end; ++begin) {
+      data_[*begin] = 1;
+      idxs_.push_back(*begin);
+    }
+  }
+
   bool contains(const Integer v) const {
     assert(v >= 0 && v < capacity());
     return data_[v] != 0;
@@ -79,8 +87,8 @@ public:
     idxs_.push_back(v);
   }
 
-  template <class ForwardIterator>
-  void insert(ForwardIterator begin, ForwardIterator end) {
+  template <class Iterator>
+  void insert(Iterator begin, Iterator end) {
     for (; begin != end; ++begin)
       insert(*begin);
   }
@@ -98,9 +106,6 @@ public:
   }
 
   void clear() {
-    if (empty())
-      return;
-
     for (auto v: idxs_)
       data_[v] = 0;
     idxs_.clear();

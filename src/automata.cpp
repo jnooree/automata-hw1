@@ -78,15 +78,14 @@ namespace {
         return entry;
       }
 
-      CacheEntry entry(states.capacity());
-      for (auto p: func(q, 0)) {
-        entry.insert(p);
-        if (visited.contains(p))
-          continue;
+      const auto &next = func(q, 0);
+      CacheEntry entry(states.capacity(), next.begin(), next.end());
+      for (auto p: next)
+        if (!visited.contains(p)) {
+          const CacheEntry &other = self(self, p);
+          entry.insert(other.begin(), other.end());
+        }
 
-        const CacheEntry &other = self(self, p);
-        entry.insert(other.begin(), other.end());
-      }
       return cache.emplace(q, std::move(entry)).first->second;
     };
 
