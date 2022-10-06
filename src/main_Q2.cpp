@@ -30,7 +30,7 @@ int main() {
 
   auto automata = athw1::Automata::from_spec(std::cin);
   for (const auto &s: strings)
-      std::cout << (automata.accepts(s) ? "yes" : "no") << '\n';
+    std::cout << (automata.accepts(s) ? "yes" : "no") << '\n';
 
   return 0;
 }

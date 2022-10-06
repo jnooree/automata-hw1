@@ -146,6 +146,7 @@ class Automata {
 public:
   using FixedSet = fixed_set<int>;
   using Cache = std::unordered_map<int, FixedSet>;
+  using Scc = std::unordered_map<int, std::vector<int>>;
 
 private:
   TransFunc func_;
@@ -170,7 +171,9 @@ public:
   }
 
   // Main API
-  bool accepts(const std::string_view &str);
+  bool accepts(const std::string_view &str) {
+    return accepts_common(str, cache_);
+  }
 
   Automata &concat(Automata &&other);
   Automata &altern(Automata &&other);

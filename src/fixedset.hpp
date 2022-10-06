@@ -14,7 +14,6 @@ namespace detail {
   private:
     const std::vector<Integer> *idxs_;
     int p_;
-    const int size_;
 
   public:
     constexpr bool operator==(const fixed_set_const_iter &rhs) const {
@@ -26,13 +25,12 @@ namespace detail {
     }
 
     constexpr fixed_set_const_iter &operator++() {
-      if (p_ >= 0) {
-        ++p_;
-        if (p_ >= size_)
-          p_ = -1;
-      }
-
+      ++p_;
       return *this;
+    }
+
+    constexpr int operator-(const fixed_set_const_iter &rhs) {
+      return p_ - rhs.p_;
     }
 
     Integer operator*() const {
@@ -41,11 +39,7 @@ namespace detail {
 
   private:
     fixed_set_const_iter(const std::vector<Integer> &idxs, const int p)
-      : idxs_(&idxs), p_(p), size_(idxs.size()) { }
-
-    static fixed_set_const_iter end(const std::vector<Integer> &idxs) {
-      return { idxs, -1 };
-    }
+      : idxs_(&idxs), p_(p) { }
 
     friend class fixed_set<Integer>;
   };
@@ -87,6 +81,10 @@ public:
     idxs_.push_back(v);
   }
 
+  void insert(const fixed_set &other) {
+    insert(other.begin(), other.end());
+  }
+
   template <class Iterator>
   void insert(Iterator begin, Iterator end) {
     for (; begin != end; ++begin)
@@ -111,14 +109,12 @@ public:
     idxs_.clear();
   }
 
-  const_iterator end() const {
-    return const_iterator::end(idxs_);
+  const_iterator begin() const {
+    return const_iterator(idxs_, 0);
   }
 
-  const_iterator begin() const {
-    if (empty())
-      return end();
-    return const_iterator(idxs_, 0);
+  const_iterator end() const {
+    return const_iterator(idxs_, idxs_.size());
   }
 };
 } // namespace athw1
