@@ -48,12 +48,12 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 }
 
 namespace {
-  using FixedSet = Automata::FixedSet;
+  using IterableFixedSet = Automata::IterableFixedSet;
   using Cache = Automata::Cache;
 
   void deterministic_transitions(const TransFunc &func,
-                                 const FixedSet &curr_states,
-                                 FixedSet &next_states, const int a) {
+                                 const IterableFixedSet &curr_states,
+                                 IterableFixedSet &next_states, const int a) {
     assert(a != 0);
     for (auto q: curr_states) {
       const auto &next = func(q, a);
@@ -64,90 +64,40 @@ namespace {
   }
 
   // Only epsilon transtitions are non-deterministic
-  void epsilon_transitions(const TransFunc &func, FixedSet &states,
-                           FixedSet &visited, Cache &cache) {
+  void epsilon_transitions(const TransFunc &func, IterableFixedSet &states,
+                           fixed_set &visited, Cache &cache) {
     using CacheEntry = Cache::mapped_type;
 
-    std::unordered_map<int, std::vector<int>> scc, scc_inv;
-    std::vector<int> backtrace;
-
-    auto insert_scc = [&](const int scc_root) {
-      const auto bit =
-        ++std::find(backtrace.begin(), backtrace.end(), scc_root);
-      // Very unlikely, but if backtrace.back() == scc_root, then
-      // it is the currently processing SCC, so just ignore it
-      if (bit == backtrace.end())
-        return;
-
-      for (auto it = bit; it != backtrace.end(); ++it)
-        scc_inv[*it].push_back(scc_root);
-
-      std::vector<int> &sv = scc.try_emplace(scc_root).first->second;
-      sv.insert(sv.end(), bit, backtrace.end());
-    };
-
-    auto sync_scc = [&](const int q, const CacheEntry &temp) {
-      auto sit = scc.find(q);
-      if (sit != scc.end())
-        for (auto p: sit->second) {
-          if (p == q)
-            continue;
-
-          auto pit = cache.find(p);
-          assert(pit != cache.end());
-          pit->second.insert(temp);
-        }
-    };
-
-    auto mark = [&](auto &&self, const int q) -> const CacheEntry & {
-      visited.insert(q);
-
+    auto mark = [&](auto &&self, CacheEntry &entry, const int q) -> void {
       auto cit = cache.find(q);
       if (cit != cache.end()) {
-        const CacheEntry &entry = cit->second;
-        visited.insert(entry);
-        return entry;
+        const CacheEntry &ce = cit->second;
+        entry.insert(ce);
+        visited.insert(ce.begin(), ce.end());
+        return;
       }
 
       const auto &next = func(q, 0);
-      CacheEntry temp(states.capacity(), next.begin(), next.end());
-      temp.insert(q);
-      backtrace.push_back(q);
-      for (auto p: next) {
-        if (visited.contains(p)) {
-          auto pit = cache.find(p);
-          if (pit != cache.end()) {
-            const CacheEntry &entry = pit->second;
-            temp.insert(entry);
-
-            auto siit = scc_inv.find(p);
-            if (siit != scc_inv.end())
-              for (auto r: siit->second)
-                insert_scc(r);
-          } else {
-            insert_scc(p);
-          }
-        } else {
-          const CacheEntry &other = self(self, p);
-          temp.insert(other);
-        }
-      }
-
-      sync_scc(q, temp);
-
-      backtrace.pop_back();
-      return cache.emplace(q, std::move(temp)).first->second;
+      entry.insert(q);
+      visited.insert(q);
+      for (auto p: next)
+        if (!visited.contains(p))
+          self(self, entry, p);
     };
 
     for (auto it = states.begin(), end = states.end(); it != end; ++it) {
-      const CacheEntry &entry = mark(mark, *it);
-      states.insert(entry);
+      if (!visited.contains(*it)) {
+        CacheEntry temp(states.capacity());
+        mark(mark, temp, *it);
+        states.insert(temp);
+      }
     }
   }
 } // namespace
 
 bool Automata::accepts_common(const std::string_view &str, Cache &cache) const {
-  FixedSet s(size()), t(size()), visited(size());
+  IterableFixedSet s(size()), t(size());
+  fixed_set visited(size());
   auto *curr_states = &s, *next_states = &t;
 
   curr_states->insert(initial());

@@ -144,9 +144,8 @@ private:
 
 class Automata {
 public:
-  using FixedSet = fixed_set<int>;
-  using Cache = std::unordered_map<int, FixedSet>;
-  using Scc = std::unordered_map<int, std::vector<int>>;
+  using IterableFixedSet = iterable_fixed_set<int>;
+  using Cache = std::unordered_map<int, IterableFixedSet>;
 
 private:
   TransFunc func_;

@@ -6,30 +6,74 @@
 
 namespace athw1 {
 template <class Integer>
-class fixed_set;
+class iterable_fixed_set;
+
+// Thin wrapper around std::vector<int> providing a fixed-size set
+class fixed_set {
+private:
+  std::vector<int> data_;
+
+public:
+  fixed_set() = default;
+
+  explicit fixed_set(const int capacity): data_(capacity) { }
+
+  template <class Iterator>
+  fixed_set(const int capacity, Iterator begin, Iterator end): data_(capacity) {
+    for (; begin != end; ++begin)
+      data_[*begin] = 1;
+  }
+
+  bool contains(const int v) const {
+    assert(v >= 0 && v < capacity());
+    return static_cast<bool>(data_[v]);
+  }
+
+  void insert(const int v) {
+    assert(v >= 0 && v < capacity());
+    data_[v] = 1;
+  }
+
+  template <class Iterator>
+  void insert(Iterator begin, Iterator end) {
+    for (; begin != end; ++begin)
+      insert(*begin);
+  }
+
+  int capacity() const {
+    return data_.size();
+  }
+
+  void clear() {
+    std::fill(data_.begin(), data_.end(), 0);
+  }
+
+  template <class Integer>
+  friend class iterable_fixed_set;
+};
 
 namespace detail {
   template <class Integer>
-  class fixed_set_const_iter {
+  class iterable_fixed_set_const_iter {
   private:
     const std::vector<Integer> *idxs_;
     int p_;
 
   public:
-    constexpr bool operator==(const fixed_set_const_iter &rhs) const {
+    constexpr bool operator==(const iterable_fixed_set_const_iter &rhs) const {
       return p_ == rhs.p_;
     }
 
-    constexpr bool operator!=(const fixed_set_const_iter &rhs) const {
+    constexpr bool operator!=(const iterable_fixed_set_const_iter &rhs) const {
       return !(*this == rhs);
     }
 
-    constexpr fixed_set_const_iter &operator++() {
+    constexpr iterable_fixed_set_const_iter &operator++() {
       ++p_;
       return *this;
     }
 
-    constexpr int operator-(const fixed_set_const_iter &rhs) {
+    constexpr int operator-(const iterable_fixed_set_const_iter &rhs) {
       return p_ - rhs.p_;
     }
 
@@ -38,38 +82,38 @@ namespace detail {
     }
 
   private:
-    fixed_set_const_iter(const std::vector<Integer> &idxs, const int p)
+    iterable_fixed_set_const_iter(const std::vector<Integer> &idxs, const int p)
       : idxs_(&idxs), p_(p) { }
 
-    friend class fixed_set<Integer>;
+    friend class iterable_fixed_set<Integer>;
   };
 } // namespace detail
 
-// Why not use std::unordered_set? because it's *TERRIBLY* slower.
 template <class Integer>
-class fixed_set {
+class iterable_fixed_set {
 private:
-  std::vector<int> data_;
+  fixed_set set_;
   std::vector<Integer> idxs_;
 
 public:
-  using const_iterator = detail::fixed_set_const_iter<Integer>;
+  using const_iterator = detail::iterable_fixed_set_const_iter<Integer>;
 
-  fixed_set() = default;
+  iterable_fixed_set() = default;
 
-  explicit fixed_set(const int capacity): data_(capacity) { }
+  explicit iterable_fixed_set(const int capacity): set_(capacity) { }
 
   template <class Iterator>
-  fixed_set(const int capacity, Iterator begin, Iterator end): data_(capacity) {
+  iterable_fixed_set(const int capacity, Iterator begin, Iterator end)
+    : set_(capacity) {
     for (; begin != end; ++begin) {
-      data_[*begin] = 1;
+      set_.insert(*begin);
       idxs_.push_back(*begin);
     }
   }
 
   bool contains(const Integer v) const {
     assert(v >= 0 && v < capacity());
-    return data_[v] != 0;
+    return set_.contains(v);
   }
 
   void insert(const Integer v) {
@@ -77,11 +121,11 @@ public:
     if (contains(v))
       return;
 
-    data_[v] = 1;
+    set_.insert(v);
     idxs_.push_back(v);
   }
 
-  void insert(const fixed_set &other) {
+  void insert(const iterable_fixed_set &other) {
     insert(other.begin(), other.end());
   }
 
@@ -96,7 +140,7 @@ public:
   }
 
   int capacity() const {
-    return data_.size();
+    return set_.capacity();
   }
 
   bool empty() const {
@@ -104,9 +148,14 @@ public:
   }
 
   void clear() {
-    for (auto v: idxs_)
-      data_[v] = 0;
-    idxs_.clear();
+    if (size() > capacity() >> 1) {
+      set_.clear();
+      idxs_.clear();
+    } else {
+      for (const auto v: idxs_)
+        set_.data_[v] = 0;
+      idxs_.clear();
+    }
   }
 
   const_iterator begin() const {
