@@ -177,7 +177,7 @@ def generate(out_dir, i, regex):
         inp = generate_examples(posix)
         out = grep_eval(posix, inp)
 
-        write_examples(out_dir, f"{i:05d}", pr, inp, out)
+        write_examples(out_dir, f"{i:04d}", pr, inp, out)
     except Exception:
         print(regex)
         raise
