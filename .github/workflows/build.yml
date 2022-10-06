@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/build.yml"
       - ".github/workflows/codecov.yml"
       - ".github/scripts/coverage.sh"
       - "src/**"
