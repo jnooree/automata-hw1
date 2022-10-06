@@ -8,7 +8,6 @@
 #include <iterator>
 #include <ostream>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -143,16 +142,10 @@ private:
 };
 
 class Automata {
-public:
-  using IterableFixedSet = iterable_fixed_set<int>;
-  using Cache = std::unordered_map<int, IterableFixedSet>;
-
 private:
   TransFunc func_;
   int init_;
   int fini_;
-
-  Cache cache_;
 
 public:
   // IO
@@ -170,9 +163,7 @@ public:
   }
 
   // Main API
-  bool accepts(const std::string_view &str) {
-    return accepts_common(str, cache_);
-  }
+  bool accepts(const std::string_view &str) const;
 
   Automata &concat(Automata &&other);
   Automata &altern(Automata &&other);
@@ -205,8 +196,6 @@ private:
   void new_init_fini();
   void rebase_idxs(int offset);
   void join(Automata &other);
-
-  bool accepts_common(const std::string_view &str, Cache &cache) const;
 };
 } // namespace athw1
 

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <stack>
-#include <unordered_map>
+#include <type_traits>
 #include <vector>
 
 #include "fixedset.hpp"
@@ -48,8 +48,7 @@ TransFunc TransFunc::from_spec(std::istream &spec_src, const int N) {
 }
 
 namespace {
-  using IterableFixedSet = Automata::IterableFixedSet;
-  using Cache = Automata::Cache;
+  using IterableFixedSet = iterable_fixed_set<int>;
 
   void deterministic_transitions(const TransFunc &func,
                                  const IterableFixedSet &curr_states,
@@ -64,57 +63,43 @@ namespace {
   }
 
   // Only epsilon transtitions are non-deterministic
+  // BFS is much cache-friendler than DFS
   void epsilon_transitions(const TransFunc &func, IterableFixedSet &states,
-                           fixed_set &visited, Cache &cache) {
-    using CacheEntry = Cache::mapped_type;
+                           std::vector<int> *curr, std::vector<int> *next) {
+    curr->reserve(states.size());
+    curr->insert(curr->end(), states.begin(), states.end());
 
-    auto mark = [&](auto &&self, CacheEntry &entry, const int q) -> void {
-      auto cit = cache.find(q);
-      if (cit != cache.end()) {
-        const CacheEntry &ce = cit->second;
-        entry.insert(ce);
-        visited.insert(ce.begin(), ce.end());
-        return;
-      }
-
-      const auto &next = func(q, 0);
-      entry.insert(q);
-      visited.insert(q);
-      for (auto p: next)
-        if (!visited.contains(p))
-          self(self, entry, p);
-    };
-
-    for (auto it = states.begin(), end = states.end(); it != end; ++it) {
-      if (!visited.contains(*it)) {
-        CacheEntry temp(states.capacity());
-        mark(mark, temp, *it);
-        states.insert(temp);
-      }
-    }
+    do {
+      for (auto q: *curr)
+        for (auto p: func(q, 0))
+          if (states.insert(p))
+            next->push_back(p);
+      std::swap(curr, next);
+      next->clear();
+    } while (!curr->empty());
   }
 } // namespace
 
-bool Automata::accepts_common(const std::string_view &str, Cache &cache) const {
+bool Automata::accepts(const std::string_view &str) const {
   IterableFixedSet s(size()), t(size());
-  fixed_set visited(size());
   auto *curr_states = &s, *next_states = &t;
-
   curr_states->insert(initial());
-  epsilon_transitions(func_, *curr_states, visited, cache);
+
+  // temporaries for epsilon transitions
+  std::vector<int> v, w;
+  epsilon_transitions(func_, *curr_states, &v, &w);
 
   for (const char a: str) {
     // Bookkeeping
     next_states->clear();
-    visited.clear();
 
     // Do transitions
     deterministic_transitions(func_, *curr_states, *next_states, ctoa(a));
-    epsilon_transitions(func_, *next_states, visited, cache);
-
     // Short-circuit
     if (next_states->empty())
       return false;
+
+    epsilon_transitions(func_, *next_states, &v, &w);
 
     // Now next_states is the new current state
     std::swap(curr_states, next_states);
