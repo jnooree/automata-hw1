@@ -6,7 +6,7 @@ rm -rf test/generated
 python3 -m pip install -r test-requirements.txt
 scripts/generate_test.py "test/test.in"
 
-.github/scripts/build_doc.sh "doc/${prefix}_report.tex"
+mv doc/*.pdf ./
 
 mv test/generated .
 rm -rf test

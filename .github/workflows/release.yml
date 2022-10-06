@@ -26,6 +26,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Build report
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: doc/*.tex
+          glob_root_file: true
+          latexmk_use_xelatex: true
+          args: "-xelatex -synctex=1 -interaction=nonstopmode -file-line-error"
+
       - name: Create zip archive
         run: .github/scripts/release.sh
 
