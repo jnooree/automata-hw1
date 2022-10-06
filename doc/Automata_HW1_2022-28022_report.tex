@@ -1,0 +1,394 @@
+\documentclass[a4paper,10pt]{scrartcl}
+\usepackage[margin=1in]{geometry} % decreases margins
+\usepackage{setspace}
+\onehalfspacing
+\setlength{\parskip}{0pt}
+\RedeclareSectionCommand[beforeskip=0pt]{subsubsection}
+
+\usepackage{enumitem}
+\setlist{noitemsep}
+
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage{amsthm}
+\usepackage{subcaption}
+\captionsetup[table]{skip=0pt}
+
+\newtheorem{remark}{Remark}[section]
+\newtheorem{cond}{Condition}[section]
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+\hypersetup{
+  colorlinks=true,% false: boxed links; true: colored links
+  linkcolor=blue,        % color of internal links
+  citecolor=blue,   % color of links to bibliography
+  filecolor=magenta,     % color of file links
+  urlcolor=blue
+}
+\urlstyle{rm}
+
+\usepackage[dvipsnames]{xcolor}
+\definecolor{stringcolor}{RGB}{233,125,44}
+\colorlet{classcolor}{ForestGreen}
+\colorlet{methodcolor}{MidnightBlue}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+
+\makeatletter
+\lstdefinestyle{mystyle}{
+  language=C++,
+  showstringspaces=false,
+  basicstyle=%
+    \ttfamily
+    \lst@ifdisplaystyle\normalsize\fi,
+    keywordstyle=\color{Blue},
+    commentstyle=\color[gray]{0.6},
+    stringstyle=\color{stringcolor},
+    texcl=true,
+    aboveskip=0pt,
+    belowskip=0pt
+}
+\makeatother
+
+\lstset{style=mystyle}
+\lstset{escapeinside={(*@}{@*)}}
+\newtcblisting{codebox}{
+  listing only, listing style=mystyle, colback=black!3!white,
+  before skip balanced=\medskipamount, after skip balanced=\medskipamount,
+  boxrule=0.3mm, left=5pt, right=5pt, top=0pt, bottom=0pt
+}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\renewcommand\thealgorithm{\thesection.\arabic{algorithm}}
+\algnewcommand{\lIf}[2]{% \lIf{<if>}{<then>}
+  \State \algorithmicif\ #1\ \algorithmicthen\ #2}
+
+\makeatletter
+\newenvironment{breakablealgorithm}
+{% \begin{breakablealgorithm}
+  \begin{spacing}{1.2}
+    \begin{center}
+      \refstepcounter{algorithm}% New algorithm
+      \hrule height.8pt depth0pt \kern2pt% \@fs@pre for \@fs@ruled
+      \renewcommand{\caption}[2][\relax]{% Make a new \caption
+        {\raggedright\textbf{\fname@algorithm~\thealgorithm} ##2\par}%
+        \ifx\relax##1\relax % #1 is \relax
+          \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##2}%
+        \else % #1 is not \relax
+          \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##1}%
+        \fi
+        \kern2pt\hrule\kern2pt
+      }
+  }{% \end{breakablealgorithm}
+      \kern2pt\hrule\relax% \@fs@post for \@fs@ruled
+    \end{center}
+  \end{spacing}
+}
+\makeatother
+
+\usepackage{tikz}
+\usetikzlibrary{automata,positioning,shapes.geometric,arrows.meta,fit}
+
+\makeatletter
+\newenvironment{tikzautomata}
+{% \begin{tikzautomata}
+  \begin{center}
+    \begin{tikzpicture}[
+      on grid,auto,thick,node distance=1cm and 1.75cm,
+      >={Stealth[round]},initial text=,accepting/.style={double distance=2pt,outer sep=1pt},
+      every state/.style={inner sep=0pt, minimum size=0.75cm},
+      proc/.style={circle,draw},
+      envel/.style={shape=ellipse,draw,semithick,inner xsep=-9pt}]
+  }{% \end{tikzautomata}
+    \end{tikzpicture}
+  \end{center}
+}
+\makeatother
+
+\usepackage{fontspec}
+\usepackage{bold-extra}
+\setsansfont[BoldFont=NanumBarunGothic]{NanumBarunGothicLight}
+\setmainfont[AutoFakeSlant]{NanumMyeongjo}
+
+\usepackage[hangul]{kotex}
+
+\addtokomafont{labelinglabel}{\bfseries}
+\addtokomafont{title}{\bfseries}
+
+\setkomafont{disposition}{\normalfont}
+\setkomafont{section}{\LARGE\bfseries\sffamily}
+\setkomafont{subsection}{\Large\bfseries\sffamily}
+\setkomafont{subsubsection}{\large\bfseries\sffamily}
+
+\usepackage{indentfirst}
+
+\title{\vspace{-0.5in}Automata HW1}
+\author{\vspace{-15pt}2022-28022 정누리}
+\date{\vspace{-5pt}\today}
+
+%++++++++++++++++++++++++++++++++++++++++
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+이 프로젝트는 \hyperref[subsec:q1]{regex - NFA 변환기}와 \hyperref[subsec:q2]{NFA 실행기}를 구현한다. 모든 실행 코드는 C++로 작성되었으며, 컴파일에는 cmake를 사용하였다.
+
+프로젝트의 대부분은 \lstinline{Automata} class로 구현되어 있다. 정의는 \lstinline{automata.h}에서, 구현은 \lstinline{automata.cpp}에서 각각 확인할 수 있다.
+
+\section{Implementation}
+\subsection{Q1}
+\label{subsec:q1}
+
+모든 정규식이 완전히 괄호 처리되어 있으므로, 다음 알고리즘~\ref{algo:regex2nfa}\을 사용하면 간단하게 NFA를 생성할 수 있다.
+
+% \begin{noindent}
+\begin{breakablealgorithm}
+  \caption{Create an NFA from regex}\label{algo:regex2nfa}
+  \begin{algorithmic}[1]
+    \Function{Automata::from\_regex}{$r$}
+      \State $S_o \coloneq$ A stack of operators
+      \State $S_N \coloneq$ A stack of NFAs
+      \For{$\textbf{each}\ a\ \textbf{in}\ r$}
+        \If{$a \in \Sigma \cup \{\epsilon\}$}
+          \State $N \coloneq$ NFA with two states and $a$ as the only transition
+          \State Push $N$ into $S_N$
+        \ElsIf{$a \in \{*, ., +\}$}
+          \State Push $a$ into $S_o$
+        \ElsIf{$a =\ )$}
+          \State \Call{handle\_closing\_parenthesis}{$S_o$, $S_N$}
+        \EndIf
+      \EndFor
+      \State \Return The NFA on top of $S_N$
+    \EndFunction
+    \Statex
+    \Function{handle\_closing\_parenthesis}{$S_o$, $S_N$}
+      \State $o \gets$ Pop item from $S_o$
+      \If{$o$ is an unary operator}
+        \State Apply $o$ to the top of $S_N$
+      \Else
+        \State $N_2 \gets$ Pop item from $S_N$
+        \State $N_1 \gets$ Pop item from $S_N$
+        \State $N \gets$ Apply $o$ to $N_1$ and $N_2$
+        \State Push $N$ into $S_N$
+      \EndIf
+    \EndFunction
+  \end{algorithmic}
+\end{breakablealgorithm}
+% \end{noindent}
+
+이때, 각각의 연산자에 의해 생성되는 NFA는 다음 \hyperref[fig:nfas-updates]{그림}과 같다.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.45\textwidth}
+    \noindent
+    \begin{tikzautomata}
+      \node[state, initial](0) {};
+      \node[state](1)[right=of 0] {};
+      \node[state](2)[right=of 1] {};
+      \node[state, accepting](3)[right=of 2] {};
+
+      \node[fit=(1)(2), envel] {};
+
+      % \begin{noindent}
+    \path[->] (0) edge node {$\epsilon$} (1)
+              (2) edge[bend left=90, looseness=1.3] node {$\epsilon$} (1)
+              (2) edge node {$\epsilon$} (3)
+              (0) edge[bend left=40] node {$\epsilon$} (3);
+    % \end{noindent}
+    \end{tikzautomata}
+    \caption{Kleene star} \label{fig:klstar}
+  \end{subfigure}
+  \begin{subfigure}{0.45\textwidth}
+    \noindent
+    \begin{tikzautomata}
+      \node[state, initial](0) {};
+      \node[state](1)[above right=of 0] {};
+      \node[state](2)[right=of 1] {};
+      \node[state](3)[below right=of 0] {};
+      \node[state](4)[right=of 3] {};
+      \node[state, accepting](5)[below right=of 2] {};
+
+      \node[fit=(1)(2), envel] {};
+      \node[fit=(3)(4), envel] {};
+
+      % \begin{noindent}
+        \path[->] (0) edge node {$\epsilon$} (1)
+                  (0) edge[swap] node {$\epsilon$} (3)
+                  (2) edge node {$\epsilon$} (5)
+                  (4) edge[swap] node {$\epsilon$} (5);
+      % \end{noindent}
+    \end{tikzautomata}
+    \caption{Union} \label{fig:union}
+  \end{subfigure}
+  \begin{subfigure}{\textwidth}
+    \noindent
+    \begin{tikzautomata}
+      \node[state, initial](0) {};
+      \node[state](1)[right=of 0] {};
+      \node[state](2)[right=of 1] {};
+      \node[state](3)[right=of 2] {};
+      \node[state](4)[right=of 3] {};
+      \node[state, accepting](5)[right=of 4] {};
+
+      \node[fit=(1)(2), envel] {};
+      \node[fit=(3)(4), envel] {};
+
+      % \begin{noindent}
+        \path[->] (0) edge node {$\epsilon$} (1)
+                  (2) edge node {$\epsilon$} (3)
+                  (4) edge node {$\epsilon$} (5);
+      % \end{noindent}
+    \end{tikzautomata}
+    \caption{Concatenation} \label{fig:concat}
+  \end{subfigure}
+  \caption{NFA update} \label{fig:nfas-updates}
+\end{figure}
+
+그 결과로 생성되는 NFA에 대해 살펴보면 다음 사실을 얻을 수 있다.
+
+\begin{remark}
+  \label{remark:cond}
+  알고리즘~\ref{algo:regex2nfa}과 그림~\ref{fig:nfas-updates}에 의해 추가되는 \textbf{모든} 상태와 전이는 다음 조건을 만족한다.
+  \begin{enumerate}[label=\roman*.]
+    \item \label{remark:cond:1} 각 상태에서, 알파벳에 의한 전이는 1개를 초과하지 않는다.
+    \item \label{remark:cond:2} 최종 상태를 제외하면 1개 이상의 다음 상태를 가진다.
+    \item \label{remark:cond:3} 한 번의 전이로 도달할 수 있는 다음 상태에는 중복이 없다.
+  \end{enumerate}
+\end{remark}
+
+\noindent따라서 다음이 성립한다.
+
+\begin{remark}
+  \label{remark:det}
+  알고리즘~\ref{algo:regex2nfa}과 그림~\ref{fig:nfas-updates}에 의해 생성된 NFA는 $\epsilon$ 전이에 의해서만 non-deterministic하다.
+\end{remark}
+
+\noindent 다른 말로 하면, 모든 알파벳에 의한 전이는 $\epsilon$ 전이를 고려하지 않으면 deterministic하다.
+
+\subsection{Q2}
+\label{subsec:q2}
+
+알고리즘~\ref{algo:regex2nfa}과 그림~\ref{fig:nfas-updates}에 의해 생성된 NFA $N(Q, \Sigma, \Delta, q_0, \{q_{\mathrm{f}}\})$가 주어진 string을 받아들이는지 판단하자. 이 NFA는 $\epsilon$ 전이에 의해서만 non-deterministic하다(remark~\ref{remark:det}). 따라서 구현에서는 각각의 현재 상태들로부터 알파벳에 의한 전이를 deterministic하게 처리한 이후, $\epsilon$ 전이를 non-deterministic하게 고려하면 다음 상태의 집합을 계산할 수 있다(알고리즘~\ref{algo:nfaaccepts}).
+
+알고리즘~\ref{algo:nfaaccepts}에서 non-deterministic 전이를 처리할 때 DFS 대신 BFS를 사용하여 캐시 친화도를 높였다. 여기에 현재 state의 집합으로부터 DFA를 동적으로 생성하는 알고리즘을 구현하면 더 빠를 가능성이 있으나, 최악의 경우 공간복잡도가 $\mathcal{O}(2^{|Q|})$가 되므로 생략하였다.
+
+\pagebreak
+
+% \begin{noindent}
+\begin{breakablealgorithm}
+  \caption{Check if a string is accepted by the NFA}\label{algo:nfaaccepts}
+  \begin{algorithmic}[1]
+    \Function{Automata::accepts}{$\Delta$, $s$}
+      \State $S_1 \coloneq$ Set of current states
+      \State $S_2 \coloneq$ Set of next states
+      \State $S_1 \gets \{q_0\}$
+      \State \Call{epsilon\_transitions}{$\Delta$, $S_1$}
+      \For{$\textbf{each}\ a\ \textbf{in}\ s$}
+        \State $S_2 \gets \bigcup\limits_{q_i \in Q} \Delta(q_i, a)$
+        \lIf{$S_2 = \emptyset$}{\Return false}
+        \State \Call{epsilon\_transitions}{$\Delta$, $S_2$}
+        \State $S_1 \gets S_2$
+      \EndFor
+      \State \Return $q_{\mathrm{f}} \in S_1$
+    \EndFunction
+    \Statex
+    \Function{epsilon\_transitions}{$\Delta$, $S$}
+      \State $W_1, W_2 \coloneq$ The working sets
+      \State $W_1 \gets S$
+      \While{$W_1 \neq \emptyset$}
+        \State $W_2 \gets \emptyset$
+        \For{$q_i \in W_1$}
+          \For{$q_j \in \Delta(q_i, \epsilon)$}
+            \If{$q_j \notin S$}
+              \State $S \gets S \cup \{q_j\}$
+              \State $W_2 \gets W_2 \cup \{q_j\}$
+            \EndIf
+          \EndFor
+        \EndFor
+        \State $W_1 \gets W_2$
+      \EndWhile
+    \EndFunction
+  \end{algorithmic}
+\end{breakablealgorithm}
+% \end{noindent}
+
+\section{Test}
+
+\subsection{Automated Tests}
+
+테스트 데이터를 작성하려면 regex를 \textbf{완전히 괄호 처리}해야 한다. 이 작업을 손으로 하면 검증이 어려울뿐만 아니라, 의도한 것과 동일한 regex가 생성되었는지 확인하기 어렵다. 따라서 주어진 regex를 완전히 괄호 처리된 형태로 변환하는 Python 스크립트를 작성하였다. 또한 자동으로 regex를 생성하고, 각각의 regex에 대해 적절한 테스트 케이스를 생성하는 코드도 작성하였다. 이 코드는
+
+\begin{enumerate}
+  \item 조건~\ref{cond:regex}\를 만족하는 regex를 생성하고,
+  \item 적절한 입력 string을 랜덤하게 생성하며,
+  \item 각 string이 regex에 의해 accept되는지 \texttt{grep} 유틸리티를 이용하여 정답을 작성한다.
+\end{enumerate}
+
+\begin{cond}\label{cond:regex} Regex $R$의 생성 조건\footnote{여기에서 $e$는 공스트링을 의미하며, $\epsilon$은 연산자가 없는 것을 나타낸다.}
+  \begin{enumerate}
+    \item $\Sigma = \{e, 0, 1\}$
+    \item $\mathcal{U} = \{\epsilon, *\}$, $\mathcal{B} = \{., +\}$
+    \item $A = \Sigma \times \mathcal{U}$
+    \item $T = A \times \mathcal{B} \times A$
+    \item $R = R_1 \cup R_2$ where $R_k = T \times \mathcal{U} \times \prod_{i = 1}^{i < k} (\mathcal{B} \times A \times \mathcal{U})$
+  \end{enumerate}
+\end{cond}
+
+\noindent 자동적으로 생성된 전체 테스트 케이스의 개수는 3600개이다.
+
+\subsection{Manual Tests}
+
+자동화된 테스트와 더불어, 강의노트에 제시된 예제들도 (약간의 변형을 거쳐) 테스트하였다. 이 예제들은 다음과 같다.
+
+% \begin{noindent}
+\begin{codebox}
+0(e+1)1
+0+111
+0(0+1)*1
+0**(0+00)**
+(0+1)(0+1)(0+1)
+((0+1)(0+1)(0+1))*
+(0+10+110)*111(0+01+011)*
+\end{codebox}
+% \end{noindent}
+
+\noindent 이외에도 문제에서 제공된 예시 regex에 해당하는 테스트 데이터를 추가로 생성하여 테스트하였다.
+
+\section[Benchmark]{Benchmark\footnote{NFA 생성 과정은 아주 빠르게 끝나므로 생략하였고, Q2에 대해서만 속도를 측정하였다.}}
+
+프로그램의 시간복잡도를 테스트하기 위해 다음 regex를 사용하였다. 이 regex로 생성된 NFA는 정확하게 5000개의 상태를 가지고, 길이가 3의 배수인 string만을 accept한다. 여기에 길이 9999 또는 10000의 random string 100개를 입력으로 주었을 때 프로그램의 수행시간을 측정하였다\footnote{\href{https://tratt.net/laurie/src/multitime/}{multitime} 유틸리티를 사용하였다.}.
+
+% \begin{noindent}
+\begin{codebox}
+((0+1)(0+1)(0+1))* <... repeated 150 times>
+\end{codebox}
+% \end{noindent}
+
+\noindent 그 결과는 다음과 같다.
+
+\begin{table}[H]
+  \centering
+  \caption{Benchmark result of NFA}\label{tab:benchmark}
+  \vspace*{-10pt}
+  \begin{tabular}[t]{ c c c c c c }
+    \toprule
+    $N=7$ & Mean  & Stdev & Min   & Median & Max   \\
+    \midrule
+    real  & 4.922 & 0.044 & 4.861 & 4.919  & 4.984 \\
+    user  & 4.917 & 0.044 & 4.853 & 4.919  & 4.980 \\
+    sys   & 0.005 & 0.005 & 0.000 & 0.004  & 0.016 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\end{document}
