@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
 import sys
-import re
 import random
+import tempfile
+import itertools
+import subprocess as sp
 from pathlib import Path
 from collections import defaultdict
 from typing import Generic, TypeVar
 
 from xeger import Xeger
+from tqdm import tqdm
+from joblib import Parallel, delayed
 
 _T = TypeVar("_T")
 alphabets = "e01"
@@ -56,8 +60,6 @@ _precedence = defaultdict(int, {
 
 
 def parenthesize(regex: str) -> str:
-    regex = explicit_concat_op(regex)
-
     result = Stack[str]()
     ops = Stack[str]()
 
@@ -99,17 +101,24 @@ def parenthesize(regex: str) -> str:
 def to_posix(regex: str):
     regex = regex.replace(".", "")
     regex = regex.replace("**", "*")
-    regex = regex.replace("e", "(?:)")
     regex = regex.replace("+", "|")
+    regex = regex.replace("e", "()")
     return regex
 
 
-def generate_examples(pattern: re.Pattern):
+def _generatable(regex: str):
+    regex = regex.replace("*", "{0,100}")
+    return regex
+
+
+def generate_examples(posix):
     inp = set()
     total_length = 0
     xeger = Xeger(limit=10000)
+
+    sub_rex = _generatable(posix)
     for _ in range(100):
-        ex = xeger.xeger(pattern)
+        ex = xeger.xeger(sub_rex)
         if not ex or ex in inp:
             continue
 
@@ -119,7 +128,6 @@ def generate_examples(pattern: re.Pattern):
             break
 
     inp = list(inp)
-    out = ["yes"] * len(inp)
 
     for _ in range(1000 - len(inp)):
         k = random.randint(1, 10000)
@@ -130,9 +138,22 @@ def generate_examples(pattern: re.Pattern):
         total_length = length_sum
         s = "".join(random.choices("01", k=k))
         inp.append(s)
-        out.append("yes" if pattern.fullmatch(s) else "no")
 
-    return inp, out
+    return inp
+
+
+def grep_eval(regex, inp):
+    with tempfile.NamedTemporaryFile("w") as f:
+        f.write("\n".join(inp) + "\n")
+        f.flush()
+        ret = sp.run(["grep", "-Exn", regex, f.name],
+                     stdout=sp.PIPE, text=True, check=False)
+
+    out = ["no"] * len(inp)
+    for line in ret.stdout.splitlines():
+        n = int(line.split(":")[0]) - 1
+        out[n] = "yes"
+    return out
 
 
 def write_examples(out_dir: Path, prefix, rex, inp, out):
@@ -146,14 +167,46 @@ def write_examples(out_dir: Path, prefix, rex, inp, out):
         fo.write("\n".join(out) + "\n")
 
 
-def generate(out_dir, i, regex):
+def generate(out_dir, i, regex, posix=None):
+    regex = explicit_concat_op(regex)
+
     pr = parenthesize(regex)
 
-    posix = to_posix(regex)
-    pattern = re.compile(posix)
-    inp, out = generate_examples(pattern)
+    if posix is None:
+        posix = to_posix(regex)
+    inp = generate_examples(posix)
 
-    write_examples(out_dir, f"{i:02d}", pr, inp, out)
+    out = grep_eval(posix, inp)
+
+    write_examples(out_dir, f"{i:04d}", pr, inp, out)
+
+
+def _all_options():
+    atoms = []
+    for a in alphabets[:-1]:
+        for o in ["", "*"]:
+            atoms.append(f"{a}{o}")
+
+    regex = []
+    for a in atoms:
+        for op in ["", "+"]:
+            for b in atoms:
+                regex.append(f"({a}{op}{b})")
+    for a in atoms:
+        for o1 in ["", "+"]:
+            for b in atoms:
+                for o2 in ["", "+"]:
+                    for c in atoms:
+                        regex.append(f"({a}{o1}{b}{o2}{c})")
+
+    return regex
+
+
+def _counter(init=0):
+    i = init
+    while True:
+        i = i + 1
+        yield i
 
 
 def main():
@@ -162,8 +215,17 @@ def main():
     out_dir.mkdir(parents=True)
 
     with src.open() as f:
+        i = -1
         for i, line in enumerate(f):
             generate(out_dir, i, line.rstrip())
+
+    parts = _all_options()
+    counter = iter(tqdm(_counter(i)))
+    Parallel(n_jobs=20)(
+        delayed(generate)(out_dir, next(counter), "".join(subset) + tail)
+        for l in range(1, 2)
+        for subset in itertools.combinations(parts, l)
+        for tail in ["", "*"])
 
 
 if __name__ == "__main__":

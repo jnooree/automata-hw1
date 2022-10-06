@@ -3,7 +3,7 @@
 import random
 from pathlib import Path
 
-from preprocess import parenthesize, write_examples
+from generate_test import parenthesize, explicit_concat_op, write_examples
 
 
 def main():
@@ -16,9 +16,10 @@ def main():
 
     out_dir = Path("benchmark")
     out_dir.mkdir()
-    write_examples(out_dir, "benchmark",
-                   parenthesize("((0+1)(0+1)(0+1))*" * 150),
-                   inputs, results)
+    write_examples(
+        out_dir, "benchmark",
+        parenthesize(explicit_concat_op("((0+1)(0+1)(0+1))*" * 150)),
+        inputs, results)
 
 
 if __name__ == "__main__":

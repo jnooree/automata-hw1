@@ -22,7 +22,7 @@ function success() {
 
 if [[ -z "${2-}" ]]; then
 	function with_timeout() {
-		timeout 10s "$@"
+		"$@"
 	}
 else
 	function with_timeout() {

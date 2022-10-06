@@ -7,7 +7,7 @@ testdir="$(dirname "$template")"
 workdir="$(dirname "$template")/generated"
 
 rm -rf "$workdir"
-scripts/preprocess.py "$template"
+scripts/generate_test.py "$template"
 cp -t "$workdir" "$testdir"/*.{q,a}*
 
 scripts/run_builder.sh "$workdir" "$suffix"
