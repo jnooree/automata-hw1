@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import re
 import sys
 import random
@@ -214,8 +215,9 @@ def main():
             generate(out_dir, i, explicit_concat_op(line.rstrip()))
 
     regexes = _all_regexes()
-    Parallel(n_jobs=30)(delayed(generate)(out_dir, j, regex)
-                        for j, regex in enumerate(tqdm(regexes), i + 1))
+    Parallel(n_jobs=os.cpu_count())(
+        delayed(generate)(out_dir, j, regex)
+        for j, regex in enumerate(tqdm(regexes), i + 1))
 
 
 if __name__ == "__main__":
