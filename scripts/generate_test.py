@@ -163,7 +163,7 @@ def write_examples(out_dir: Path, prefix, rex, inp, out):
         fo.write(rex + "\n")
 
     with open(out_dir / f"{prefix}.q2", "w") as fo:
-        fo.write(f"{len(inp)}\n" + "\n".join(inp) + "\n")
+        fo.write(f"{len(inp)} " + " ".join(inp) + "\n")
 
     with open(out_dir / f"{prefix}.a2", "w") as fo:
         fo.write("\n".join(out) + "\n")
