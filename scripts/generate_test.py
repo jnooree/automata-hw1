@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import sys
 import random
 import tempfile
@@ -100,14 +101,14 @@ def parenthesize(regex: str) -> str:
 
 def to_posix(regex: str):
     regex = regex.replace(".", "")
-    regex = regex.replace("**", "*")
     regex = regex.replace("+", "|")
+    regex = re.sub(r"\*+", "*", regex)
     regex = regex.replace("e", "()")
     return regex
 
 
 def _generatable(regex: str):
-    regex = regex.replace("*", "{0,100}")
+    regex = regex.replace("*", "{0,20}")
     return regex
 
 
@@ -167,46 +168,39 @@ def write_examples(out_dir: Path, prefix, rex, inp, out):
         fo.write("\n".join(out) + "\n")
 
 
-def generate(out_dir, i, regex, posix=None):
-    regex = explicit_concat_op(regex)
-
-    pr = parenthesize(regex)
-
-    if posix is None:
+def generate(out_dir, i, regex):
+    try:
+        pr = parenthesize(regex)
         posix = to_posix(regex)
-    inp = generate_examples(posix)
 
-    out = grep_eval(posix, inp)
+        inp = generate_examples(posix)
+        out = grep_eval(posix, inp)
 
-    write_examples(out_dir, f"{i:04d}", pr, inp, out)
-
-
-def _all_options():
-    atoms = []
-    for a in alphabets[:-1]:
-        for o in ["", "*"]:
-            atoms.append(f"{a}{o}")
-
-    regex = []
-    for a in atoms:
-        for op in ["", "+"]:
-            for b in atoms:
-                regex.append(f"({a}{op}{b})")
-    for a in atoms:
-        for o1 in ["", "+"]:
-            for b in atoms:
-                for o2 in ["", "+"]:
-                    for c in atoms:
-                        regex.append(f"({a}{o1}{b}{o2}{c})")
-
-    return regex
+        write_examples(out_dir, f"{i:05d}", pr, inp, out)
+    except Exception:
+        print(regex)
+        raise
 
 
-def _counter(init=0):
-    i = init
-    while True:
-        i = i + 1
-        yield i
+_uop = ["", "*"]
+_bop = [".", "+"]
+
+
+def _cartesian_product(*args):
+    return ["".join(prod) for prod in itertools.product(*args)]
+
+
+def _all_terms():
+    atoms = _cartesian_product(alphabets, _uop)
+    terms = _cartesian_product(atoms, _bop, atoms)
+    return atoms, [f"({t})" for t in terms]
+
+
+def _all_regexes():
+    atoms, terms = _all_terms()
+    r1 = _cartesian_product(terms, _uop)
+    r2 = _cartesian_product(r1, _bop, atoms, _uop)
+    return r1 + [f"({r})" for r in r2]
 
 
 def main():
@@ -217,15 +211,11 @@ def main():
     with src.open() as f:
         i = -1
         for i, line in enumerate(f):
-            generate(out_dir, i, line.rstrip())
+            generate(out_dir, i, explicit_concat_op(line.rstrip()))
 
-    parts = _all_options()
-    counter = iter(tqdm(_counter(i)))
-    Parallel(n_jobs=20)(
-        delayed(generate)(out_dir, next(counter), "".join(subset) + tail)
-        for l in range(1, 2)
-        for subset in itertools.combinations(parts, l)
-        for tail in ["", "*"])
+    regexes = _all_regexes()
+    Parallel(n_jobs=30)(delayed(generate)(out_dir, j, regex)
+                        for j, regex in enumerate(tqdm(regexes), i + 1))
 
 
 if __name__ == "__main__":

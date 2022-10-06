@@ -9,7 +9,7 @@ from generate_test import parenthesize, explicit_concat_op, write_examples
 def main():
     alphabets = "01"
 
-    selected_sizes = random.choices(list(range(5000, 10000)), k=500)
+    selected_sizes = random.choices(list(range(9999, 10000)), k=100)
     inputs = [
         ''.join(random.choices(alphabets, k=size)) for size in selected_sizes]
     results = ["yes" if size % 3 == 0 else "no" for size in selected_sizes]
