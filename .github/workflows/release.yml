@@ -17,6 +17,10 @@ jobs:
 
   release:
     needs: run-codecov
+    if: |
+      always()
+      && (needs.run-codecov.result == 'success'
+          || needs.run-codecov.result == 'skipped')
 
     runs-on: ubuntu-latest
     permissions:
