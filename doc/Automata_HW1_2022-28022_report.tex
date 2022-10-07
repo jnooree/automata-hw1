@@ -11,14 +11,15 @@
 \usepackage{textcomp}
 \usepackage{booktabs}
 \usepackage[mathrm=sym]{unicode-math}
-\usepackage{amsthm}
 \usepackage{subcaption}
 \captionsetup[table]{skip=0pt}
-
-\newtheorem{remark}{Remark}[section]
-\newtheorem{cond}{Condition}[section]
 \numberwithin{figure}{section}
 \numberwithin{table}{section}
+
+\usepackage{amsthm}
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}[section]
+\newtheorem{defin}{Definition}[section]
 
 \usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
 \hypersetup{
@@ -64,10 +65,13 @@
 
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-
-\renewcommand\thealgorithm{\thesection.\arabic{algorithm}}
 \algnewcommand{\lIf}[2]{% \lIf{<if>}{<then>}
   \State \algorithmicif\ #1\ \algorithmicthen\ #2}
+
+\makeatletter
+\@addtoreset{algorithm}{section}% algorithm counter resets every chapter
+\makeatother
+\renewcommand{\thealgorithm}{\thesection.\arabic{algorithm}}
 
 \makeatletter
 \newenvironment{breakablealgorithm}
@@ -114,7 +118,7 @@
 \usepackage{fontspec}
 \usepackage{bold-extra}
 \setsansfont[BoldFont=NanumBarunGothic]{NanumBarunGothicLight}
-\setmainfont[AutoFakeSlant]{NanumMyeongjo}
+\setmainfont[AutoFakeSlant,BoldFont=NanumMyeongjoBold]{NanumMyeongjo}
 
 \usepackage[hangul]{kotex}
 
@@ -257,12 +261,12 @@
 그 결과로 생성되는 NFA에 대해 살펴보면 다음 사실을 얻을 수 있다.
 
 \begin{remark}
-  \label{remark:cond}
-  알고리즘~\ref{algo:regex2nfa}과 그림~\ref{fig:nfas-updates}에 의해 추가되는 \textbf{모든} 상태와 전이는 다음 조건을 만족한다.
+  \label{remark:regex}
+  알고리즘~\ref{algo:regex2nfa}과 그림~\ref{fig:nfas-updates}에 의해 추가되는 \textbf{\textsl{모든}} 상태와 전이는 다음 조건을 만족한다.
   \begin{enumerate}[label=\roman*.]
-    \item \label{remark:cond:1} 각 상태에서, 알파벳에 의한 전이는 1개를 초과하지 않는다.
-    \item \label{remark:cond:2} 최종 상태를 제외하면 1개 이상의 다음 상태를 가진다.
-    \item \label{remark:cond:3} 한 번의 전이로 도달할 수 있는 다음 상태에는 중복이 없다.
+    \item 각 상태에서, 알파벳에 의한 전이는 1개를 초과하지 않는다.
+    \item 최종 상태를 제외하면 1개 이상의 다음 상태를 가진다.
+    \item 한 번의 전이로 도달할 수 있는 다음 상태에는 중복이 없다.
   \end{enumerate}
 \end{remark}
 
@@ -290,14 +294,14 @@
   \begin{algorithmic}[1]
     \Function{Automata::accepts}{$\Delta$, $s$}
       \State $S_1 \coloneq$ Set of current states
-      \State $S_2 \coloneq$ Set of next states
+      \State $Q_2 \coloneq$ Set of next states
       \State $S_1 \gets \{q_0\}$
       \State \Call{epsilon\_transitions}{$\Delta$, $S_1$}
       \For{$\textbf{each}\ a\ \textbf{in}\ s$}
-        \State $S_2 \gets \bigcup\limits_{q_i \in Q} \Delta(q_i, a)$
-        \lIf{$S_2 = \emptyset$}{\Return false}
-        \State \Call{epsilon\_transitions}{$\Delta$, $S_2$}
-        \State $S_1 \gets S_2$
+        \State $Q_2 \gets \bigcup\limits_{q_i \in Q} \Delta(q_i, a)$
+        \lIf{$Q_2 = \emptyset$}{\Return false}
+        \State \Call{epsilon\_transitions}{$\Delta$, $Q_2$}
+        \State $S_1 \gets Q_2$
       \EndFor
       \State \Return $q_{\mathrm{f}} \in S_1$
     \EndFunction
@@ -329,20 +333,29 @@
 테스트 데이터를 작성하려면 regex를 \textbf{완전히 괄호 처리}해야 한다. 이 작업을 손으로 하면 검증이 어려울뿐만 아니라, 의도한 것과 동일한 regex가 생성되었는지 확인하기 어렵다. 따라서 주어진 regex를 완전히 괄호 처리된 형태로 변환하는 Python 스크립트를 작성하였다. 또한 자동으로 regex를 생성하고, 각각의 regex에 대해 적절한 테스트 케이스를 생성하는 코드도 작성하였다. 이 코드는
 
 \begin{enumerate}
-  \item 조건~\ref{cond:regex}\를 만족하는 regex를 생성하고,
-  \item 적절한 입력 string을 랜덤하게 생성하며,
-  \item 각 string이 regex에 의해 accept되는지 \texttt{grep} 유틸리티를 이용하여 정답을 작성한다.
+  \item 알고리즘~\ref{algo:regex}을 따라 regex의 집합 $R$을 생성하고,
+  \item 적절한 입력 string의 집합 $S$를 각 $r \in R$에 대해 랜덤하게 생성하며,
+  \item 각 string $s \in S$가 $L(r)$에 포함되는지 \texttt{grep} 유틸리티를 이용하여 정답을 작성한다.
 \end{enumerate}
 
-\begin{cond}\label{cond:regex} Regex $R$의 생성 조건\footnote{여기에서 $e$는 공스트링을 의미하며, $\epsilon$은 연산자가 없는 것을 나타낸다.}
-  \begin{enumerate}
-    \item $\Sigma = \{e, 0, 1\}$
-    \item $\mathcal{U} = \{\epsilon, *\}$, $\mathcal{B} = \{., +\}$
-    \item $A = \Sigma \times \mathcal{U}$
-    \item $T = A \times \mathcal{B} \times A$
-    \item $R = R_1 \cup R_2$ where $R_k = T \times \mathcal{U} \times \prod_{i = 1}^{i < k} (\mathcal{B} \times A \times \mathcal{U})$
-  \end{enumerate}
-\end{cond}
+\pagebreak
+
+% \begin{noindent}
+\begin{breakablealgorithm}
+  \caption[Gen]{Generate a set of regex\protect\footnotemark}\label{algo:regex}
+  \begin{algorithmic}[1]
+    \Function{GenerateRegex}{}
+      \State $\Sigma \gets \{e, 0, 1\},\ \mathcal{U} \gets \{\epsilon, *\},\ \mathcal{B} \gets \{., +\}$
+      \State $A \gets \{\text{\Call{Concat}{$a$}}: a \in \Sigma \times \mathcal{U}\}$
+      \State $T \gets \{\text{\Call{Concat}{$t$}}: t \in \{(\} \times A \times \mathcal{B} \times A \times \{)\}\}$
+      \State $R \gets \{\text{\Call{Concat}{$r$}}: r \in R_1 \cup R_2\}$\Comment{$R_k \coloneq T \times \mathcal{U} \times \prod_{i = 1}^{i < k} \mathcal{B} \times A \times \mathcal{U}$}
+      \State \Return $R$
+    \EndFunction
+  \end{algorithmic}
+\end{breakablealgorithm}
+% \end{noindent}
+
+\footnotetext{여기에서 $e$는 공스트링을 의미하며, $\epsilon$은 연산자가 없는 것을 나타낸다.}
 
 \noindent 자동적으로 생성된 전체 테스트 케이스의 개수는 3600개이다.
 
@@ -366,11 +379,11 @@
 
 \section[Benchmark]{Benchmark\footnote{NFA 생성 과정은 아주 빠르게 끝나므로 생략하였고, Q2에 대해서만 속도를 측정하였다.}}
 
-프로그램의 시간복잡도를 테스트하기 위해 다음 regex를 사용하였다. 이 regex로 생성된 NFA는 정확하게 5000개의 상태를 가지고, 길이가 3의 배수인 string만을 accept한다. 여기에 길이 9999 또는 10000의 random string 100개를 입력으로 주었을 때 프로그램의 수행시간을 측정하였다\footnote{\href{https://tratt.net/laurie/src/multitime/}{multitime} 유틸리티를 사용하였다.}.
+프로그램의 시간복잡도를 테스트하기 위해 다음 regex를 사용하였다. 이 regex로 생성된 NFA는 정확하게 5000개의 상태를 가지고, 길이가 3의 배수인 string만을 accept한다. 여기에 길이 9999 또는 10000의 random string 100개를 입력으로 주었을 때 프로그램의 수행시간을 측정하였다\footnote{벤치마크는 Ubuntu 20.04 LTS, Dual Intel\textsuperscript{\tiny\textregistered} Xeon\textsuperscript{\tiny\textregistered} Silver 4214R CPU @ 2.40GHz 플랫폼에서 진행되었으며, 시간은 \href{https://tratt.net/laurie/src/multitime/}{\texttt{multitime}} 유틸리티로 측정하였다.}.
 
 % \begin{noindent}
 \begin{codebox}
-((0+1)(0+1)(0+1))* <... repeated 150 times>
+((0+1)(0+1)(0+1))*<... repeated 150 times>
 \end{codebox}
 % \end{noindent}
 
@@ -382,7 +395,7 @@
   \vspace*{-10pt}
   \begin{tabular}[t]{ c c c c c c }
     \toprule
-    $N=7$ & Mean  & Stdev & Min   & Median & Max   \\
+    $(N=7)$ & Mean  & Stdev & Min   & Median & Max   \\
     \midrule
     real  & 4.922 & 0.044 & 4.861 & 4.919  & 4.984 \\
     user  & 4.917 & 0.044 & 4.853 & 4.919  & 4.980 \\
