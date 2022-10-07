@@ -209,8 +209,8 @@ def main():
     out_dir = src.with_name("generated")
     out_dir.mkdir(parents=True)
 
+    i = -1
     with src.open() as f:
-        i = -1
         for i, line in enumerate(f):
             generate(out_dir, i, explicit_concat_op(line.rstrip()))
 
