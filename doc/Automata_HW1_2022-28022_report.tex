@@ -293,28 +293,28 @@
   \caption{Check if a string is accepted by the NFA}\label{algo:nfaaccepts}
   \begin{algorithmic}[1]
     \Function{Automata::accepts}{$\Delta$, $s$}
-      \State $S_1 \coloneq$ Set of current states
+      \State $Q_1 \coloneq$ Set of current states
       \State $Q_2 \coloneq$ Set of next states
-      \State $S_1 \gets \{q_0\}$
-      \State \Call{epsilon\_transitions}{$\Delta$, $S_1$}
+      \State $Q_1 \gets \{q_0\}$
+      \State \Call{epsilon\_transitions}{$\Delta$, $Q_1$}
       \For{$\textbf{each}\ a\ \textbf{in}\ s$}
-        \State $Q_2 \gets \bigcup\limits_{q_i \in Q} \Delta(q_i, a)$
+        \State $Q_2 \gets \bigcup\limits_{q_i \in Q_1} \Delta(q_i, a)$
         \lIf{$Q_2 = \emptyset$}{\Return false}
         \State \Call{epsilon\_transitions}{$\Delta$, $Q_2$}
-        \State $S_1 \gets Q_2$
+        \State $Q_1 \gets Q_2$
       \EndFor
-      \State \Return $q_{\mathrm{f}} \in S_1$
+      \State \Return $q_{\mathrm{f}} \in Q_1$
     \EndFunction
     \Statex
-    \Function{epsilon\_transitions}{$\Delta$, $S$}
+    \Function{epsilon\_transitions}{$\Delta$, $Q$}
       \State $W_1, W_2 \coloneq$ The working sets
-      \State $W_1 \gets S$
+      \State $W_1 \gets Q$
       \While{$W_1 \neq \emptyset$}
         \State $W_2 \gets \emptyset$
         \For{$q_i \in W_1$}
           \For{$q_j \in \Delta(q_i, \epsilon)$}
-            \If{$q_j \notin S$}
-              \State $S \gets S \cup \{q_j\}$
+            \If{$q_j \notin Q$}
+              \State $Q \gets Q \cup \{q_j\}$
               \State $W_2 \gets W_2 \cup \{q_j\}$
             \EndIf
           \EndFor
